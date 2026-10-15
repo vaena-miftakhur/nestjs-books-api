@@ -1,45 +1,88 @@
-import { loginDto } from './dto/login.dto.js';
-import { registerDto } from './dto/register.dto.js';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { LoginDto } from './dto/login.dto.js';
+import { RegisterDto } from './dto/register.dto.js';
 import { forgotPasswordDto } from './dto/forgot-password.dto.js';
-import { Injectable } from '@nestjs/common';
 import { user } from './entities/users-entity.js';
 
 @Injectable()
 export class AuthService {
-    //register
-    register(registerDto: registerDto): user{
+    private users: user[] = [];
+    private nextId = 1;
+
+    // Register
+    register(registerDto: RegisterDto) {
+        const existingUser = this.users.find(
+            (u) => u.email === registerDto.email,
+        );
+
+        if (existingUser) {
+            return {
+                message: 'Email sudah terdaftar',
+            };
+        }
+
         const newUser: user = {
-            id : 1,
-            nama : registerDto.nama,
-            email : registerDto.email,
-            password : registerDto.password,
-            ConfirmPassword : registerDto.ConfirmPassword
-        }
+            id: this.nextId++,
+            nama: registerDto.nama,
+            email: registerDto.email,
+            password: registerDto.password,
+        };
 
-    return newUser;
+        this.users.push(newUser);
+
+        return {
+            message: 'Register berhasil',
+            data: {
+                id: newUser.id,
+                nama: newUser.nama,
+                email: newUser.email,
+            },
+        };
     }
 
-    //login
-    login(loginDto: loginDto): loginDto{
-        const user: loginDto = {
-            email : loginDto.email,
-            password : loginDto.password
+    // Login
+    login(loginDto: LoginDto) {
+        const existingUser = this.users.find(
+            (u) => u.email === loginDto.email,
+        );
+
+        if (
+            !existingUser ||
+            existingUser.password !== loginDto.password
+        ) {
+            throw new UnauthorizedException('Email atau password salah');
         }
-    return user;
-        
+
+        return {
+            message: 'Login berhasil',
+            data: {
+                id: existingUser.id,
+                nama: existingUser.nama,
+                email: existingUser.email,
+            },
+        };
     }
 
-    //forgot password
-    forgotPassword(forgotPasswordDto: forgotPasswordDto): forgotPasswordDto{
-        const user: forgotPasswordDto = {
-            email : forgotPasswordDto.email
-        }
-    return user;
+    // Forgot Password
+    forgotPassword(forgotPasswordDto: forgotPasswordDto) {
+        const existingUser = this.users.find(
+            (u) => u.email === forgotPasswordDto.email,
+        );
 
+        if (!existingUser) {
+            throw new UnauthorizedException('Email tidak ditemukan');
+        }
+
+        return {
+            message: 'Permintaan reset password berhasil',
+            email: existingUser.email,
+        };
     }
 
-    //password recovery
-    passwordRecovery(){
-
+    // Password Recovery
+    passwordRecovery() {
+        return {
+            message: 'Password berhasil diperbarui',
+        };
     }
 }
